@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notes App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background: #f4f4f4;
+    }
+    input, textarea {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 10px;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover { background-color: #0056b3; }
+    .note {
+      background: white;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Notes App</h1>
+
+  <h3>Add Note</h3>
+  <input id="title" placeholder="Title" />
+  <textarea id="content" placeholder="Content"></textarea>
+  <input id="tags" placeholder="Tags (comma separated)" />
+  <button onclick="addNote()">Add Note</button>
+
+  <hr />
+  <h3>All Notes</h3>
+  <div id="notes"></div>
+
+  <script>
+    const API_URL = "http://localhost:8080";
+
+    async function getNotes() {
+      const res = await fetch(`${API_URL}/get`);
+      const data = await res.json();
+      const container = document.getElementById("notes");
+      container.innerHTML = "";
+
+      data.forEach(note => {
+        const div = document.createElement("div");
+        div.className = "note";
+        div.innerHTML = `
+          <h4>${note.title}</h4>
+          <p>${note.content}</p>
+          <p><b>Tags:</b> ${note.tags.join(",")}</p>
+          <button onclick="deleteNote('${note.id}')">Delete</button>
+          <button onclick="updateNote('${note.id}')">Update</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    async function addNote() {
+      const title = document.getElementById("title").value;
+      const content = document.getElementById("content").value;
+      const tags = document.getElementById("tags").value.split(",");
+
+      try {
+        const res = await fetch(`${API_URL}/add`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, content, tags }),
+        });
+        if (res.ok) {
+          alert("Note added!");
+          getNotes();
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Failed to add note");
+      }
+    }
+
+    async function deleteNote(id) {
+      if (!confirm("Delete this note?")) return;
+      const res = await fetch(`${API_URL}/delete?id=${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        alert("Note deleted!");
+        getNotes();
+      }
+    }
+
+    async function updateNote(id) {
+      const title = prompt("Enter new title:");
+      const content = prompt("Enter new content:");
+      const tags = prompt("Enter tags (comma separated):").split(",");
+
+      const res = await fetch(`${API_URL}/update?id=${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content, tags }),
+      });
+
+      if (res.ok) {
+        alert("Note updated!");
+        getNotes();
+      } else {
+        alert("Failed to update note");
+      }
+    }
+
+    getNotes(); // load notes on page load
+  </script>
+</body>
+</html>
