@@ -2,13 +2,18 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"notes/database"
 	"notes/handlers"
+	"notes/logger"
 )
 
 func main() {
+
+	logger.Logger()
+	defer logger.Log.Sync()
 
 	db := database.ConnectDB()
 	fmt.Println("Using DB:", db.Name())
@@ -21,15 +26,13 @@ func main() {
 	mux.HandleFunc("/get", handlers.GetNotes)
 	mux.HandleFunc("/gett", handlers.GetNoteById)
 
-	 // Serve frontend files
-   handler := enableCORS(mux)
-
+	// Serve frontend files
+	handler := enableCORS(mux)
 
 	fmt.Println("Server is running on http://localhost:8080")
-	http.ListenAndServe(":8080", handler)
+	log.Fatal(http.ListenAndServe(":8080", handler))
 
 }
-
 
 func enableCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"notes/database"
+	"notes/logger"
 	"notes/models"
 	"notes/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.uber.org/zap"
 )
 
 //var notes []models.Note
@@ -31,7 +33,8 @@ func AddNote(w http.ResponseWriter, r *http.Request) {
 	//reads/decode  json
 	err := json.NewDecoder(r.Body).Decode(&note)
 	if err != nil {
-		http.Error(w, "Invalid Json", http.StatusBadRequest)
+		logger.Log.Warn("Invalid Json", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid Json", "")
 		return
 	}
 
@@ -47,39 +50,46 @@ func AddNote(w http.ResponseWriter, r *http.Request) {
 	//inserts note into db
 	_, err = collection.InsertOne(ctx, note)
 	if err != nil {
-		http.Error(w, "Error Saving note", http.StatusInternalServerError)
+		logger.Log.Warn("Error saving Note", zap.Error(err))
+		utils.RespondWithError(w, http.StatusInternalServerError, "Error Saving note", "")
 	}
 
 	//set content header
-	w.Header().Set("Content-Type", "application/json")
+	//w.Header().Set("Content-Type", "application/json")
 	//writes to client-encode to json
-	json.NewEncoder(w).Encode(map[string]string{"message": fmt.Sprintf("%v added to notes", note.Title)})
+	// json.NewEncoder(w).Encode(map[string]string{"message": fmt.Sprintf("%v added to notes", note.Title)})
+	//fmt.Println("Added task")
 
-	fmt.Println("Added task")
+	logger.Log.Info("Note added successfully", zap.String("title", note.Title))
+
+	utils.RespondWithJSON(w, http.StatusCreated, map[string]string{"message": fmt.Sprintf("%v added successfully", note.Title)})
 }
 
 func UpdateNote(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
-		http.Error(w, "Only Put Allowed", http.StatusMethodNotAllowed)
+		utils.RespondWithError(w, http.StatusMethodNotAllowed, "Only Put Allowed", "")
 		return
 	}
 
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
-		http.Error(w, "Missing Id Param", http.StatusBadRequest)
+		//logger.Log.Warn("Missing id param", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Missing Id Param", "")
 		return
 	}
 	idStr = strings.TrimSpace(idStr)
 
 	objectId, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
-		http.Error(w, "Invalid id format", http.StatusBadRequest)
+		logger.Log.Warn("Invalid id format", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid id format", "")
 		return
 	}
 
 	var updated models.Note
 	if err = json.NewDecoder(r.Body).Decode(&updated); err != nil {
-		http.Error(w, "Invalid json format", http.StatusBadRequest)
+		logger.Log.Warn("Invalid json", zap.Error(err))
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid json format", "")
 		return
 	}
 
@@ -97,25 +107,27 @@ func UpdateNote(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	fmt.Println("Received ID:", idStr)
-	fmt.Println("Converted ObjectID:", objectId)
-	fmt.Println("Updating fields:", update)
-
 	result, err := collection.UpdateOne(ctx, bson.M{"_id": objectId}, update)
 	if err != nil {
-		http.Error(w, "Database update error", http.StatusInternalServerError)
+		logger.Log.Warn("Failed to update", zap.Error(err))
+		utils.RespondWithError(w, http.StatusInternalServerError, "Database update error", "")
 		return
 	}
 
 	if result.MatchedCount == 0 {
-		http.Error(w, "Note not found", http.StatusNotFound)
+		logger.Log.Warn("Failed to update", zap.Error(err))
+		utils.RespondWithError(w, http.StatusNotFound, "Note not found", "")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Note updated successfully",
-	})
+	logger.Log.Info("Updated Task successfully", zap.String("Title", updated.Title))
+
+	utils.RespondWithJSON(w, http.StatusCreated, map[string]string{"message": fmt.Sprintf("%v updated ", updated.Title)})
+
+	// w.Header().Set("Content-Type", "application/json")
+	// json.NewEncoder(w).Encode(map[string]string{
+	// 	"message": "Note updated successfully",
+	// })
 
 	// for idx, n := range notes {
 	// 	if n.ID == primitive.NewObjectID() {
@@ -139,20 +151,21 @@ func UpdateNote(w http.ResponseWriter, r *http.Request) {
 
 func DeleteNote(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		http.Error(w, "Only Delete Allowed", http.StatusMethodNotAllowed)
+		utils.RespondWithError(w, http.StatusMethodNotAllowed, "Only Delete Alowed", "")
 		return
 	}
 
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
-		http.Error(w, "Missing Id param", http.StatusBadRequest)
+		utils.RespondWithError(w, http.StatusBadRequest, "Missing Id param", "")
 		return
 	}
 	idStr = strings.TrimSpace(idStr)
 
 	objectId, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
-		http.Error(w, "Invalid id format", http.StatusBadRequest)
+		logger.Log.Error("invalid id format")
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid id format", "")
 		return
 	}
 
@@ -163,19 +176,22 @@ func DeleteNote(w http.ResponseWriter, r *http.Request) {
 
 	result, err := collection.DeleteOne(ctx, bson.M{"_id": objectId})
 	if err != nil {
-		http.Error(w, "Database delete Error", http.StatusInternalServerError)
+		logger.Log.Warn("Failed to delete note")
+		utils.RespondWithError(w, http.StatusInternalServerError, "Database delete Error", "")
 		return
 	}
 
 	if result.DeletedCount == 0 {
-		http.Error(w, "Note not found", http.StatusNotFound)
+		utils.RespondWithError(w, http.StatusNotFound, "Note not found", "")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Note deleted successfully",
-	})
+	logger.Log.Warn("Delete successful")
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Note deleted successfully"})
+	// json.NewEncoder(w).Encode(map[string]string{
+	// 	"message": "Note deleted successfully",
+	// })w.Header().Set("Content-Type", "application/json")
 
 	// for idx, n := range notes {
 	// 	if n.ID == primitive.NewObjectID() {
@@ -190,7 +206,7 @@ func DeleteNote(w http.ResponseWriter, r *http.Request) {
 
 func GetNotes(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Only Get Allowed", http.StatusMethodNotAllowed)
+	utils.RespondWithError(w,  http.StatusMethodNotAllowed, "Only Get Allowed", "")
 		return
 	}
 
@@ -201,7 +217,8 @@ func GetNotes(w http.ResponseWriter, r *http.Request) {
 
 	cursor, err := collection.Find(ctx, bson.M{})
 	if err != nil {
-		http.Error(w, "Error fetching Notes", http.StatusInternalServerError)
+		logger.Log.Warn("Failed to fetch notes", zap.Error(err))
+	utils.RespondWithError(w,  http.StatusInternalServerError, "Error fetching notes", "")
 		return
 	}
 
@@ -212,38 +229,42 @@ func GetNotes(w http.ResponseWriter, r *http.Request) {
 	for cursor.Next(ctx) {
 		var note models.Note
 		if err := cursor.Decode(&note); err != nil {
-			http.Error(w, "Error Decoding note", http.StatusInternalServerError)
+			logger.Log.Warn("Failed to decoding  notes", zap.Error(err))
+			utils.RespondWithError(w,  http.StatusInternalServerError, "Error Decoding note", "")
 			return
 		}
 		notes = append(notes, note)
 	}
 
 	if err := cursor.Err(); err != nil {
-		http.Error(w, "Cursor Error", http.StatusInternalServerError)
+		logger.Log.Warn("Cursor erro", zap.Error(err))
+		utils.RespondWithError(w,  http.StatusInternalServerError, "Cursor Error","")
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(notes)
+	// w.Header().Set("Content-Type", "application/json")
+	// json.NewEncoder(w).Encode(notes)
 
-	fmt.Println("Fetched all notes")
+	logger.Log.Info("Fetched all tasks")
+
+	utils.RespondWithJSON(w, http.StatusOK, notes)
 }
 
-
 func GetNoteById(w http.ResponseWriter, r *http.Request) {
-if	r.Method == http.MethodGet {
-		http.Error(w, "Only Get Allowed", http.StatusMethodNotAllowed)
+	if r.Method != http.MethodGet {
+		utils.RespondWithError(w,  http.StatusMethodNotAllowed, "Only Get Allowed", "")
 		return
 	}
 
 	idStr := r.URL.Query().Get("id")
-	if idStr == ""{
-		http.Error(w, "Missing id Param", http.StatusBadRequest)
+	if idStr == "" {
+		utils.RespondWithError(w,  http.StatusBadRequest, "Missing id Param", "")
 		return
 	}
 
 	objextId, err := primitive.ObjectIDFromHex(idStr)
-	if err !=nil {
-		http.Error(w, "Invalid id format", http.StatusBadRequest)
+	if err != nil {
+		logger.Log.Warn("Invalid id format", zap.Error(err))
+		utils.RespondWithError(w,  http.StatusBadRequest, "Invalid id format", "")
 		return
 	}
 
@@ -255,10 +276,13 @@ if	r.Method == http.MethodGet {
 	var note models.Note
 	err = collection.FindOne(ctx, bson.M{"_id": objextId}).Decode(&note)
 	if err != nil {
-		http.Error(w, "Note note found", http.StatusBadRequest)
+		logger.Log.Warn("Note not founs", zap.Error(err))
+		utils.RespondWithError(w,  http.StatusBadRequest, "Note note found", "")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(note)
+	// w.Header().Set("Content-Type", "application/json")
+	// json.NewEncoder(w).Encode(note)
+
+	utils.RespondWithJSON(w, http.StatusOK, note)
 }

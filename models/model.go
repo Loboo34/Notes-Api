@@ -6,14 +6,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// type Note struct{
-// 	ID int    `json:"id"`
-// 	Title string  `json:"title"`
-// 	Content string 	`json:"content"`
-// 	Tags []string  `json:"tags"`
-// 	CreatedAt time.Time  `json:"createdAt"`
-
-// }
+type User struct {
+	ID       string `bson:"_id,omitempty" json:"id"`
+	Username string `bson:"username" json:"username"`
+	Email    string `bson:"email" json:"email"`
+	Password string `bson:"password,omitempty" json:"password,omitempty"`
+}
 
 type Note struct {
 	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
