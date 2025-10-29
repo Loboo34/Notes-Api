@@ -1,0 +1,58 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Build outputs
+/bin/
+/build/
+/dist/
+
+# Output of the go coverage tool
+*.out
+coverage.out
+
+# Dependency directories (uncomment if you vendor dependencies)
+/vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# IDEs and editors
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.*.local
+.env.local
+*.secret
+*.key
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+docker-compose.override.yml
+
+# Misc
+node_modules/
+dist/
