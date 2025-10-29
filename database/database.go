@@ -4,6 +4,7 @@ import (
 	"context"//controlls lifetime of a db
 	"fmt"
 	"time"
+	"os"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -12,8 +13,10 @@ import (
 var Client *mongo.Client//reps mongo client connection
 var DB *mongo.Database//reps actual db
 
-func ConnectDB() *mongo.Database {
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")//connects to local db
+
+func ConnectDB() *mongo.Database {	
+	var mongoUri = os.Getenv("MONGO_URI") 
+	clientOptions := options.Client().ApplyURI(mongoUri)//connects to local db
 	//options.Client()-creates a stuct/obj that holds:-connection uri,timeout settings, pool size, Auth creds
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -23,6 +26,7 @@ func ConnectDB() *mongo.Database {
 	//ctx-context to pass to mongo ops
 
 	defer cancel()//ensures resources are cleared up after connection
+	
 
 	client, err := mongo.Connect(ctx, clientOptions)//connects to db using given context(ctx) and potions
 	//pass clientOptions to mongo.connect creating an actual mongo client connection
@@ -39,5 +43,4 @@ func ConnectDB() *mongo.Database {
 	Client = client//stores client globally for reuse
 	DB = client.Database("notesdb")//specifies db being called
 	return DB
-
 }

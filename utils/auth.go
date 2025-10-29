@@ -2,12 +2,16 @@ package utils
 
 import (
 	"time"
+	"os"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var jwtKey = []byte("imNotAbadSlimeSlurp") //secret key
+var secret = os.Getenv("JWT_SECRET") 
+
+var jwtKey = []byte(secret) //secret key
+
 
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
@@ -21,10 +25,11 @@ func CheckPassHash(password string, hash string) bool {
 }
 
 func GenerateJWT(email string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": email,
 		"exp":   time.Now().Add(time.Hour * 24).Unix(),
 	})
+
 
 	return token.SignedString(jwtKey)
 }

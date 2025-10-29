@@ -8,11 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"notes/database"
-	"notes/logger"
-	"notes/models"
-	"notes/utils"
+	"github.com/Loboo34/Notes-Api/database"
+	"github.com/Loboo34/Notes-Api/logger"
+	"github.com/Loboo34/Notes-Api/models"
+	"github.com/Loboo34/Notes-Api/utils"
 
+	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
@@ -28,7 +29,7 @@ func AddNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var note models.Note
+	var note models.Note //title,content,tags
 
 	//reads/decode  json
 	err := json.NewDecoder(r.Body).Decode(&note)
@@ -71,7 +72,8 @@ func UpdateNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := r.URL.Query().Get("id")
+	vars := mux.Vars(r)
+	idStr := vars["id"]
 	if idStr == "" {
 		//logger.Log.Warn("Missing id param", zap.Error(err))
 		utils.RespondWithError(w, http.StatusBadRequest, "Missing Id Param", "")
@@ -154,8 +156,8 @@ func DeleteNote(w http.ResponseWriter, r *http.Request) {
 		utils.RespondWithError(w, http.StatusMethodNotAllowed, "Only Delete Alowed", "")
 		return
 	}
-
-	idStr := r.URL.Query().Get("id")
+	vars := mux.Vars(r)
+	idStr := vars["id"]
 	if idStr == "" {
 		utils.RespondWithError(w, http.StatusBadRequest, "Missing Id param", "")
 		return
@@ -206,7 +208,7 @@ func DeleteNote(w http.ResponseWriter, r *http.Request) {
 
 func GetNotes(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-	utils.RespondWithError(w,  http.StatusMethodNotAllowed, "Only Get Allowed", "")
+		utils.RespondWithError(w, http.StatusMethodNotAllowed, "Only Get Allowed", "")
 		return
 	}
 
@@ -218,7 +220,7 @@ func GetNotes(w http.ResponseWriter, r *http.Request) {
 	cursor, err := collection.Find(ctx, bson.M{})
 	if err != nil {
 		logger.Log.Warn("Failed to fetch notes", zap.Error(err))
-	utils.RespondWithError(w,  http.StatusInternalServerError, "Error fetching notes", "")
+		utils.RespondWithError(w, http.StatusInternalServerError, "Error fetching notes", "")
 		return
 	}
 
@@ -230,7 +232,7 @@ func GetNotes(w http.ResponseWriter, r *http.Request) {
 		var note models.Note
 		if err := cursor.Decode(&note); err != nil {
 			logger.Log.Warn("Failed to decoding  notes", zap.Error(err))
-			utils.RespondWithError(w,  http.StatusInternalServerError, "Error Decoding note", "")
+			utils.RespondWithError(w, http.StatusInternalServerError, "Error Decoding note", "")
 			return
 		}
 		notes = append(notes, note)
@@ -238,7 +240,7 @@ func GetNotes(w http.ResponseWriter, r *http.Request) {
 
 	if err := cursor.Err(); err != nil {
 		logger.Log.Warn("Cursor erro", zap.Error(err))
-		utils.RespondWithError(w,  http.StatusInternalServerError, "Cursor Error","")
+		utils.RespondWithError(w, http.StatusInternalServerError, "Cursor Error", "")
 	}
 
 	// w.Header().Set("Content-Type", "application/json")
@@ -251,20 +253,20 @@ func GetNotes(w http.ResponseWriter, r *http.Request) {
 
 func GetNoteById(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		utils.RespondWithError(w,  http.StatusMethodNotAllowed, "Only Get Allowed", "")
+		utils.RespondWithError(w, http.StatusMethodNotAllowed, "Only Get Allowed", "")
 		return
 	}
-
-	idStr := r.URL.Query().Get("id")
+	vars := mux.Vars(r)
+	idStr := vars["is"]
 	if idStr == "" {
-		utils.RespondWithError(w,  http.StatusBadRequest, "Missing id Param", "")
+		utils.RespondWithError(w, http.StatusBadRequest, "Missing id Param", "")
 		return
 	}
 
 	objextId, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
 		logger.Log.Warn("Invalid id format", zap.Error(err))
-		utils.RespondWithError(w,  http.StatusBadRequest, "Invalid id format", "")
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid id format", "")
 		return
 	}
 
@@ -277,7 +279,7 @@ func GetNoteById(w http.ResponseWriter, r *http.Request) {
 	err = collection.FindOne(ctx, bson.M{"_id": objextId}).Decode(&note)
 	if err != nil {
 		logger.Log.Warn("Note not founs", zap.Error(err))
-		utils.RespondWithError(w,  http.StatusBadRequest, "Note note found", "")
+		utils.RespondWithError(w, http.StatusBadRequest, "Note note found", "")
 		return
 	}
 

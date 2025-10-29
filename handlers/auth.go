@@ -10,10 +10,10 @@ import (
 	//"go.mongodb.org/mongo-driver/mongo"
 	
 
-	"notes/models"
-	"notes/database"
-	"notes/utils"
-	"notes/logger"
+	"github.com/Loboo34/Notes-Api/models"
+	"github.com/Loboo34/Notes-Api/database"
+	"github.com/Loboo34/Notes-Api/utils"
+	"github.com/Loboo34/Notes-Api/logger"
 )
 
 func RegisterUser(w http.ResponseWriter, r *http.Request) {

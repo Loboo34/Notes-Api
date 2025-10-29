@@ -2,8 +2,9 @@ package middleware
 
 import (
 	"net/http"
-	"notes/utils"
 	"strings"
+
+	"github.com/Loboo34/Notes-Api/utils"
 )
 
 func AuthMiddleWare(next http.HandlerFunc) http.HandlerFunc {
